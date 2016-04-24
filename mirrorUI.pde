@@ -110,7 +110,7 @@ void draw() {
     c = 59;
     //println("resetting c");
   } else {
-    c -= 60/int(frameRate);
+    c -= 60/int(floor(frameRate)-1);
     c = constrain(c, 0, 59);
   }
 
