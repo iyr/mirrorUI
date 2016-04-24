@@ -1,0 +1,20 @@
+FONTLOG for Modulo
+------- --- ----------
+This file provides detailed information on the Modulo Font Software.
+This information should be distributed along with the Modulo fonts
+and any derivative works.
+
+Basic Font Information
+----- ---- -----------
+Modulo is a typographic work based on 6 geometrical modules to create every single glyphs.
+
+ChangeLog
+---------
+16 sept. 2012
+- Initial version of Modulo.
+
+Acknowledgements
+----------------
+N: Alex Chavot
+E: a.chavot@gmail.com
+W: http://www.alexchavot.fr
