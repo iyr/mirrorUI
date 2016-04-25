@@ -8,7 +8,7 @@ PFont woodWarriorLight;
 PFont woodWarriorBold;
 PFont woodWarriorRegular;
 PFont Modulo;
-
+PFont Grotesk;
 
 float[] animationCurve = new float[60];
 int clockX = 384;
@@ -26,10 +26,14 @@ String city = "Boulder";
 //Set API key for Weather API
 String apiKey = "82e1fdd5ea81c1e7a6d1164e0022ae2c";
 
+JSONObject currentWeather;
+JSONObject forecast;
+String[] forecastDates = new String[5];
 int curTemp;
 int curHigh;
 int curLow;
 int numFetches = 0;
+boolean drawForecast = false;
 
 //true = Celsius
 //false = Fahrenheit
@@ -39,15 +43,16 @@ boolean tU = false;
 boolean invert = false;
 
 void setup() {
-  noCursor();
+  //noCursor();
   size(900, 1440);
   yRatio = (240.0/1440.0)*height;
   frameRate(60);
   fill(255);
-  woodWarriorLight = createFont("Woodwarrior-Light.otf", 32);
-  woodWarriorBold = createFont("Woodwarrior-Bold.otf", 32);
+  woodWarriorLight   = createFont("Woodwarrior-Light.otf", 32);
+  woodWarriorBold    = createFont("Woodwarrior-Bold.otf", 32);
   woodWarriorRegular = createFont("Woodwarrior-Regular.otf", 32);
-  Modulo = createFont("Modulo.otf", 32);
+  Modulo             = createFont("Modulo.otf", 32);
+  Grotesk            = createFont("Grotesk.otf", 32);
 
   currentTime[0] = hour();
   currentTime[1] = getMinuteTen();
@@ -55,22 +60,27 @@ void setup() {
 
   for (int i = 0; i < 60; i++) {
     animationCurve[i] = ((-15*(1-i)*(1+i))+1)*0.000287356;
-    println(animationCurve[i]);
+    //println(animationCurve[i]);
   }
-  thread("fetchWeather");
+  fetchWeather();
+  //currentWeather = loadJSONObject("http://api.openweathermap.org/data/2.5/weather?q="+city+"us&appid="+apiKey);
+  //forecast = loadJSONObject("http://api.openweathermap.org/data/2.5/forecast?q="+city+",us&mode=json&appid="+apiKey);
 }
 
 void draw() {
   background(0);
   textFont(woodWarriorLight, 32);
-  
+
   text(city, 8, height-8);
-  
+
   //update day every midnight
   if (hour() == 0) day = new Date().getDay() + 7;
-  
+
   //automatically refresh weather data every 15 minutes.
-  if ((minute())%15 == 0) thread("fetchWeather");
+  if ((minute())%15 == 0 && second() == 2) { 
+    thread("fetchWeather");
+    while (second() == 2);
+  }
 
   if (currentTime[1] != getMinuteTen()) {
     newMinuteTen();
@@ -110,7 +120,7 @@ void draw() {
     c = 59;
     //println("resetting c");
   } else {
-    c -= 60/int(floor(frameRate)-1);
+    c -= 60/int(frameRate);
     c = constrain(c, 0, 59);
   }
 
@@ -137,20 +147,127 @@ void draw() {
 
   drawMonth();
   drawTemp();
-  if(invert) filter(INVERT);
+  if (drawForecast) drawForecast();
+  if (invert) filter(INVERT);
 }
 
 void fetchWeather() {
-  JSONObject currentWeather = loadJSONObject("http://api.openweathermap.org/data/2.5/weather?q="+city+"us&appid="+apiKey);
+  currentWeather = loadJSONObject("http://api.openweathermap.org/data/2.5/weather?q="+city+"us&appid="+apiKey);
+  forecast = loadJSONObject("http://api.openweathermap.org/data/2.5/forecast?q="+city+",us&mode=json&appid="+apiKey);
   curTemp = tConv(currentWeather.getJSONObject("main").getFloat("temp"));
   curHigh = tConv(currentWeather.getJSONObject("main").getFloat("temp_max"));
   curLow  = tConv(currentWeather.getJSONObject("main").getFloat("temp_min"));
   numFetches++;
+  for (int i = 0; i < 5; i++) {
+    forecastDates[i] = forecast.getJSONArray("list").getJSONObject(i*8).getString("dt_txt");
+  }
+}
+
+void drawForecast() {
+  noFill();
+  strokeWeight(5);
+  rect(width/2, height/2, 350, 450, 50);
+  //line(width/2, 350, width/2, height-350);
+
+  int wSpeed;
+  String wDir;
+  for (int i = 0; i < 4; i++) {
+    //line(constrain(i, 0, 1)*175+275, 270, constrain(i, 0, 1)*175+275, height-270);
+    line(100, i*180+450, width-100, i*180+450);
+  }
+  for (int i = 0; i < 5; i++) {
+    line(width/2+50, i*180+350, width/2+50, i*180+450);
+    translate(0, -8);
+    textFont(woodWarriorRegular, 72);
+    if (stringArray(forecastDates[i], 8) != 0) text(stringArray(forecastDates[i], 8), 135, i*180+430);
+    text(stringArray(forecastDates[i], 9), 185, i*180+430);
+    textAlign(CENTER);
+    textFont(woodWarriorLight, 48);
+    text(weekDays[day+1+i], 187.5, i*180+350);
+    translate(4, 16);
+
+    textAlign(LEFT);
+    textFont(Grotesk, 36);
+    text(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONArray("weather").getJSONObject(0).getString("main"), 285, i*180+310);
+    textFont(Grotesk, 18);
+    text(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONArray("weather").getJSONObject(0).getString("description"), 290, i*180+330);
+    textFont(woodWarriorRegular, 18);
+    wSpeed = msToMph(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONObject("wind").getFloat("speed"));
+    wDir  = degToDir(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONObject("wind").getFloat("deg"));
+    text(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONObject("main").getInt("humidity"), 405, i*180+420);
+    text(wSpeed, 290, i*180+375);
+    textFont(Grotesk, 18);
+    text(" mph - "+wDir, 312, i*180+375);
+    text("Humidity", 290, i*180+415);
+    textAlign(BASELINE);
+    translate(-4, -8);
+
+    fill(255);
+    stroke(255);
+    strokeWeight(4);
+    textFont(woodWarriorLight, 72);
+    textAlign(RIGHT);
+    if (tConv(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONObject("main").getFloat("temp")) < 0) {
+      rect(width/2 - 136, height-48, 18, 4);
+    }
+    if (abs(tConv(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONObject("main").getFloat("temp"))) < 10) {
+      text("0"+abs(tConv(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONObject("main").getFloat("temp"))), width/2+200, i*180+400);
+    } else {
+      text(abs(tConv(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONObject("main").getFloat("temp"))), width/2+200, i*180+400);
+    }
+    textSize(36);
+    textAlign(LEFT);
+
+    if (tU == false) {
+      text("f", width/2+200, i*180+400);
+    } else {    
+      text("c", width/2+200, i*180+400);
+    }
+    noFill();
+    ellipse(width/2+208, i*180+335, 12, 12);
+    rect(width/2+264, i*180+362.5, 32, 0);
+    textSize(24);
+    if (tConv(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONObject("main").getFloat("temp_max")) < 0) {
+      rect(width/2+236, i*180+337.5, 3, 0);
+    }
+    if (tConv(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONObject("main").getFloat("temp_min")) < 0) {
+      rect(width/2+236, i*180+387.5, 3, 0);
+    }
+    text(abs(tConv(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONObject("main").getFloat("temp_max"))), width/2+244, i*180+350);
+    text(abs(tConv(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONObject("main").getFloat("temp_min"))), width/2+244, i*180+400);
+
+    textAlign(BASELINE);
+  }
+}
+
+//helper function to convert meters/second to miles/hour
+int msToMph(float ms) { 
+  return round(ms*2.23694);
+}
+
+//helper function to convert wind heading in degrees to human-friendlay directions
+String degToDir(float degrees) {
+  constrain(degrees, 0, 360);
+  if (348.75 <= degrees && degrees < 11.24)   return "N";
+  if (11.25 <= degrees && degrees < 33.74)    return "NNE";
+  if (33.75 <= degrees && degrees < 56.24)    return "NE";
+  if (56.25 <= degrees && degrees < 78.74)    return "ENE";
+  if (78.75 <= degrees && degrees < 101.24)   return "E";
+  if (101.25 <= degrees && degrees < 123.74)  return "ESE";
+  if (123.75 <= degrees && degrees < 146.24)  return "SE";
+  if (146.25 <= degrees && degrees < 168.74)  return "SSE";
+  if (168.75 <= degrees && degrees < 191.24)  return "S";
+  if (191.25 <= degrees && degrees < 213.74)  return "SSW";
+  if (213.75 <= degrees && degrees < 236.24)  return "SW";
+  if (236.25 <= degrees && degrees < 258.74)  return "WSW";
+  if (258.75 <= degrees && degrees < 281.24)  return "W";
+  if (281.25 <= degrees && degrees < 303.74)  return "WNW";
+  if (303.75 <= degrees && degrees < 326.24)  return "NW";
+  if (326.25 <= degrees && degrees < 348.74)  return "NNW";
+  return "empty";
 }
 
 void drawTemp() {
-  scale(0.75, 0.75);
-  translate(width/6, height/3);
   fill(255);
   stroke(255);
   strokeWeight(4);
@@ -184,20 +301,30 @@ void drawTemp() {
   }
   text(abs(curHigh), width/2+44, height-58);
   text(abs(curLow), width/2+44, height-12);
-  
-  translate(-width/6, -height/3);
-  scale(4/3, 4/3);
+
   textAlign(BASELINE);
 }
 
-void keyPressed(){
-  if (key == 't'){
+void keyPressed() {
+  switch(key) {
+  case 't':
     tU = !tU;
     fetchWeather();
-  }
-  
-  if (key == 'i'){
+    background(0);
+    if(drawForecast) drawForecast();
+    break;
+
+  case 'i':
     invert = !invert;
+    break;
+
+  case 'w':
+    drawForecast = !drawForecast;
+    break;
+
+  case 'u':
+    fetchWeather();
+    break;
   }
 }
 
@@ -220,8 +347,12 @@ void drawMonth() {
 
 //helper function that treats strings as arrays of characters.
 char stringArray(String toChar, int arrInd) {
-  char[] arr = toChar.toCharArray();
-  return arr[arrInd];
+  if (toChar == null) { 
+    return '0';
+  } else {  
+    char[] arr = toChar.toCharArray();
+    return arr[arrInd];
+  }
 }
 
 void drawDays(int numDays) {
