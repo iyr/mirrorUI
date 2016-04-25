@@ -118,9 +118,9 @@ void draw() {
   if (second()%2 == 1 || c == 0)
   {
     c = 59;
-    //println("resetting c");
+    println("resetting c");
   } else {
-    c -= 60/int(floor(frameRate))-1;
+    c -= 60/int(frameRate-1);
     c = constrain(c, 0, 59);
   }
 
@@ -149,6 +149,7 @@ void draw() {
   drawTemp();
   if (drawForecast) drawForecast();
   if (invert) filter(INVERT);
+  println(frameRate);
 }
 
 void fetchWeather() {
