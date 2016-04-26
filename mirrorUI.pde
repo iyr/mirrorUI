@@ -22,6 +22,8 @@ float yRatio;
 
 //Set US city for Weather API
 String city = "Boulder";
+String[] cities = {"Boulder", "Colorado Springs", "Denver", "Fort Collins"};
+int curCity = 0;
 
 //Set API key for Weather API
 String apiKey = "82e1fdd5ea81c1e7a6d1164e0022ae2c";
@@ -29,6 +31,7 @@ String apiKey = "82e1fdd5ea81c1e7a6d1164e0022ae2c";
 JSONObject currentWeather;
 JSONObject forecast;
 String[] forecastDates = new String[5];
+String curSky;
 int curTemp;
 int curHigh;
 int curLow;
@@ -71,7 +74,7 @@ void draw() {
   background(0);
   textFont(woodWarriorLight, 32);
 
-  text(city, 8, height-8);
+  text(cities[curCity], 8, height-8);
 
   //update day every midnight
   if (hour() == 0) day = new Date().getDay() + 7;
@@ -80,6 +83,7 @@ void draw() {
   if ((minute())%15 == 0 && second() == 2) { 
     thread("fetchWeather");
     while (second() == 2);
+    c = 59;
   }
 
   if (currentTime[1] != getMinuteTen()) {
@@ -118,7 +122,7 @@ void draw() {
   if (second()%2 == 1 || c == 0)
   {
     c = 59;
-    println("resetting c");
+    //println("resetting c");
   } else {
     c -= 60/int(frameRate-1);
     c = constrain(c, 0, 59);
@@ -149,12 +153,19 @@ void draw() {
   drawTemp();
   if (drawForecast) drawForecast();
   if (invert) filter(INVERT);
-  println(frameRate);
+}
+
+//Helper function barrowed verbatim from https://stackoverflow.com/questions/27475308/
+public String replace(String str) {
+    return str.replaceAll(" ", "%20");
 }
 
 void fetchWeather() {
-  currentWeather = loadJSONObject("http://api.openweathermap.org/data/2.5/weather?q="+city+"us&appid="+apiKey);
-  forecast = loadJSONObject("http://api.openweathermap.org/data/2.5/forecast?q="+city+",us&mode=json&appid="+apiKey);
+  currentWeather = loadJSONObject("http://api.openweathermap.org/data/2.5/weather?q="+replace(cities[curCity])+"us&appid="+apiKey);
+  println("http://api.openweathermap.org/data/2.5/weather?q="+replace(cities[curCity])+"us&appid="+apiKey);
+  forecast = loadJSONObject("http://api.openweathermap.org/data/2.5/forecast?q="+replace(cities[curCity])+",us&mode=json&appid="+apiKey);
+  //println("http://api.openweathermap.org/data/2.5/forecast?q="+replace(cities[curCity])+",us&mode=json&appid="+apiKey);
+  curSky  = currentWeather.getJSONArray("weather").getJSONObject(0).getString("description");
   curTemp = tConv(currentWeather.getJSONObject("main").getFloat("temp"));
   curHigh = tConv(currentWeather.getJSONObject("main").getFloat("temp_max"));
   curLow  = tConv(currentWeather.getJSONObject("main").getFloat("temp_min"));
@@ -167,42 +178,43 @@ void fetchWeather() {
 void drawForecast() {
   noFill();
   strokeWeight(5);
-  rect(width/2, height/2, 350, 450, 50);
+  rect(width/2, height/2, 350, 360, 50);
   //line(width/2, 350, width/2, height-350);
 
   int wSpeed;
   String wDir;
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 3; i++) {
     //line(constrain(i, 0, 1)*175+275, 270, constrain(i, 0, 1)*175+275, height-270);
-    line(100, i*180+450, width-100, i*180+450);
+    line(100, i*180+540, width-100, i*180+540);
   }
-  for (int i = 0; i < 5; i++) {
-    line(width/2+50, i*180+350, width/2+50, i*180+450);
+  for (int i = 0; i < 4; i++) {
+    line(width/2+50, i*180+440, width/2+50, i*180+540);
     translate(0, -8);
     textFont(woodWarriorRegular, 72);
-    if (stringArray(forecastDates[i], 8) != 0) text(stringArray(forecastDates[i], 8), 135, i*180+430);
-    text(stringArray(forecastDates[i], 9), 185, i*180+430);
+    if (stringArray(forecastDates[i], 8) != 0) text(stringArray(forecastDates[i], 8), 135, i*180+520);
+    text(stringArray(forecastDates[i], 9), 185, i*180+520);
     textAlign(CENTER);
     textFont(woodWarriorLight, 48);
-    text(weekDays[day+1+i], 187.5, i*180+350);
+    text(weekDays[day+1+i], 187.5, i*180+440);
     translate(4, 16);
 
     textAlign(LEFT);
     textFont(Grotesk, 36);
-    text(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONArray("weather").getJSONObject(0).getString("main"), 285, i*180+310);
+    text(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONArray("weather").getJSONObject(0).getString("main"), 285, i*180+400);
     textFont(Grotesk, 18);
-    text(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONArray("weather").getJSONObject(0).getString("description"), 290, i*180+330);
+    text(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONArray("weather").getJSONObject(0).getString("description"), 290, i*180+420);
     textFont(woodWarriorRegular, 18);
     wSpeed = msToMph(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONObject("wind").getFloat("speed"));
     wDir  = degToDir(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONObject("wind").getFloat("deg"));
-    text(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONObject("main").getInt("humidity"), 405, i*180+420);
-    text(wSpeed, 290, i*180+375);
+    text(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONObject("main").getInt("humidity"), 405, i*180+510);
+    text(wSpeed, 290, i*180+465);
     textFont(Grotesk, 18);
-    text(" mph - "+wDir, 312, i*180+375);
-    text("Humidity", 290, i*180+415);
+    text(" mph - "+wDir, 312, i*180+465);
+    text("Humidity", 290, i*180+505);
     textAlign(BASELINE);
     translate(-4, -8);
 
+    translate(0, 90);
     fill(255);
     stroke(255);
     strokeWeight(4);
@@ -236,7 +248,7 @@ void drawForecast() {
     }
     text(abs(tConv(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONObject("main").getFloat("temp_max"))), width/2+244, i*180+350);
     text(abs(tConv(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONObject("main").getFloat("temp_min"))), width/2+244, i*180+400);
-
+    translate(0, -90);
     textAlign(BASELINE);
   }
 }
@@ -249,7 +261,7 @@ int msToMph(float ms) {
 //helper function to convert wind heading in degrees to human-friendlay directions
 String degToDir(float degrees) {
   constrain(degrees, 0, 360);
-  if (348.75 <= degrees && degrees < 11.24)   return "N";
+  if (348.75 <= degrees || degrees < 11.24)   return "N";
   if (11.25 <= degrees && degrees < 33.74)    return "NNE";
   if (33.75 <= degrees && degrees < 56.24)    return "NE";
   if (56.25 <= degrees && degrees < 78.74)    return "ENE";
@@ -265,10 +277,11 @@ String degToDir(float degrees) {
   if (281.25 <= degrees && degrees < 303.74)  return "WNW";
   if (303.75 <= degrees && degrees < 326.24)  return "NW";
   if (326.25 <= degrees && degrees < 348.74)  return "NNW";
-  return "empty";
+  return Float.toString(degrees);
 }
 
 void drawTemp() {
+  translate(width*0.375, 0);
   fill(255);
   stroke(255);
   strokeWeight(4);
@@ -282,7 +295,9 @@ void drawTemp() {
   } else {
     text(abs(curTemp), width/2, height-12);
   }
-  textSize(36);
+  textFont(Grotesk, 24);
+  text(curSky, width/2+100, height-100);
+  textFont(woodWarriorLight, 36);
   textAlign(LEFT);
 
   if (tU == false) {
@@ -302,7 +317,8 @@ void drawTemp() {
   }
   text(abs(curHigh), width/2+44, height-58);
   text(abs(curLow), width/2+44, height-12);
-
+  
+  translate(-width*0.375, 0);
   textAlign(BASELINE);
 }
 
@@ -312,7 +328,7 @@ void keyPressed() {
     tU = !tU;
     fetchWeather();
     background(0);
-    if(drawForecast) drawForecast();
+    if (drawForecast) drawForecast();
     break;
 
   case 'i':
@@ -324,6 +340,11 @@ void keyPressed() {
     break;
 
   case 'u':
+    fetchWeather();
+    break;
+
+  case 'c':
+    curCity = curCity == cities.length-1 ? 0 : curCity+1;
     fetchWeather();
     break;
   }
