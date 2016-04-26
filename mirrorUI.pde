@@ -15,6 +15,7 @@ int clockX = 384;
 int clockY = 40;
 int[] currentTime = new int[3];
 int c = 0;
+int cw = 0;
 String[] months = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
 String[] weekDays = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
 int day = new Date().getDay() + 7;
@@ -43,12 +44,12 @@ boolean drawForecast = false;
 boolean tU = false;
 
 //invert image
-boolean invert = false;
+boolean blur = false;
 
 void setup() {
   //noCursor();
   size(900, 1440);
-  yRatio = (240.0/1440.0)*height;
+  yRatio = (240.0/1440.0)*1440;
   frameRate(60);
   fill(255);
   woodWarriorLight   = createFont("Woodwarrior-Light.otf", 32);
@@ -63,7 +64,7 @@ void setup() {
 
   for (int i = 0; i < 60; i++) {
     animationCurve[i] = ((-15*(1-i)*(1+i))+1)*0.000287356;
-    //println(animationCurve[i]);
+    println(animationCurve[i]);
   }
   fetchWeather();
   //currentWeather = loadJSONObject("http://api.openweathermap.org/data/2.5/weather?q="+city+"us&appid="+apiKey);
@@ -119,6 +120,13 @@ void draw() {
   text(".", clockX+24, clockY);
   text(".", clockX+24, clockY-16);
 
+  if (cw == 59) {
+    if(!drawForecast) cw = 0;
+  } else {
+    cw += 60/int(frameRate-1);
+    cw = constrain(cw, 0, 59);
+  }
+
   if (second()%2 == 1 || c == 0)
   {
     c = 59;
@@ -151,13 +159,13 @@ void draw() {
 
   drawMonth();
   drawTemp();
+  //if (drawForecast) filter(BLUR);
   if (drawForecast) drawForecast();
-  if (invert) filter(INVERT);
 }
 
 //Helper function barrowed verbatim from https://stackoverflow.com/questions/27475308/
 public String replace(String str) {
-    return str.replaceAll(" ", "%20");
+  return str.replaceAll(" ", "%20");
 }
 
 void fetchWeather() {
@@ -177,6 +185,9 @@ void fetchWeather() {
 
 void drawForecast() {
   noFill();
+  translate(0, map(animationCurve[int(map(cw, 0, 59, 59, 0))], 0, 15, 0, height));
+  float colFac = map(cw, 0, 59, 0, 255);
+  stroke(colFac);
   strokeWeight(5);
   rect(width/2, height/2, 350, 360, 50);
   //line(width/2, 350, width/2, height-350);
@@ -188,6 +199,8 @@ void drawForecast() {
     line(100, i*180+540, width-100, i*180+540);
   }
   for (int i = 0; i < 4; i++) {
+    fill(colFac);
+    stroke(colFac);
     line(width/2+50, i*180+440, width/2+50, i*180+540);
     translate(0, -8);
     textFont(woodWarriorRegular, 72);
@@ -215,8 +228,6 @@ void drawForecast() {
     translate(-4, -8);
 
     translate(0, 90);
-    fill(255);
-    stroke(255);
     strokeWeight(4);
     textFont(woodWarriorLight, 72);
     textAlign(RIGHT);
@@ -250,6 +261,8 @@ void drawForecast() {
     text(abs(tConv(forecast.getJSONArray("list").getJSONObject(i*8+4).getJSONObject("main").getFloat("temp_min"))), width/2+244, i*180+400);
     translate(0, -90);
     textAlign(BASELINE);
+    stroke(255);
+    fill(255);
   }
 }
 
@@ -317,7 +330,7 @@ void drawTemp() {
   }
   text(abs(curHigh), width/2+44, height-58);
   text(abs(curLow), width/2+44, height-12);
-  
+
   translate(-width*0.375, 0);
   textAlign(BASELINE);
 }
@@ -331,12 +344,13 @@ void keyPressed() {
     if (drawForecast) drawForecast();
     break;
 
-  case 'i':
-    invert = !invert;
+  case 'b':
+    blur = !blur;
     break;
 
   case 'w':
     drawForecast = !drawForecast;
+    cw = 0;
     break;
 
   case 'u':
