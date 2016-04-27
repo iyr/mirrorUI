@@ -4,6 +4,7 @@
 
 import java.util.Date;
 
+PImage pilogo;
 PFont woodWarriorLight;
 PFont woodWarriorBold;
 PFont woodWarriorRegular;
@@ -43,15 +44,17 @@ boolean drawForecast = false;
 //false = Fahrenheit
 boolean tU = false;
 
-//invert image
-boolean blur = false;
+//display info
+boolean drawInfo = false;
 
 void setup() {
-  //noCursor();
+  noCursor();
   size(900, 1440);
-  yRatio = (240.0/1440.0)*1440;
+  
+  yRatio = (240.0/1440.0)*height;
   frameRate(60);
   fill(255);
+  pilogo = loadImage("rpi.png");
   woodWarriorLight   = createFont("Woodwarrior-Light.otf", 32);
   woodWarriorBold    = createFont("Woodwarrior-Bold.otf", 32);
   woodWarriorRegular = createFont("Woodwarrior-Regular.otf", 32);
@@ -69,6 +72,7 @@ void setup() {
   fetchWeather();
   //currentWeather = loadJSONObject("http://api.openweathermap.org/data/2.5/weather?q="+city+"us&appid="+apiKey);
   //forecast = loadJSONObject("http://api.openweathermap.org/data/2.5/forecast?q="+city+",us&mode=json&appid="+apiKey);
+  imageMode(CENTER);
 }
 
 void draw() {
@@ -159,8 +163,53 @@ void draw() {
 
   drawMonth();
   drawTemp();
-  //if (drawForecast) filter(BLUR);
+  if (drawInfo){
+    drawForecast = false;
+    filter(BLUR, 2);
+    drawInfo();
+  }
+  
+  if(drawInfo){
+    image(pilogo, width/2, height/2+450);
+  } else {
+    tint(24, 24, 24);
+    image(pilogo, width/2, height/2);
+    noTint();    
+  }
+  
   if (drawForecast) drawForecast();
+}
+
+void drawInfo(){
+  translate(0, -150);
+  textAlign(CENTER);
+  textFont(Grotesk, 72);
+  text("IoT  Mirror", width/2, 300);
+  textSize(32);
+  text("By", width/2, 350);
+  text("Daniel  Strawn", width/2, 400);
+  text("forwardsweep.net", width/2, 450);
+  
+  text("Written  in  Processing", width/2, 550);
+  text("for   ATLS-2519", width/2, 600);
+  text("processing.org", width/2, 650);
+  
+  text("Weather  API  used:", width/2, 750);
+  text("OpenWeatherMap.org", width/2, 800);
+  
+  text("Typefaces  used:", width/2, 900);
+  textFont(woodWarriorRegular, 24);
+  text("WoodWarrior", width/2, 1050);
+  textFont(Modulo, 40);
+  text("Modulo", width/2, 950);
+  textFont(Grotesk, 32);
+  text("Grotesk", width/2, 1000);
+  text("fontlibrary.org", width/2, 1100);
+  
+  text("raspberrypi.org", width/2, 1565);
+  
+  translate(0, 150);
+  textAlign(BASELINE);
 }
 
 //Helper function barrowed verbatim from https://stackoverflow.com/questions/27475308/
@@ -344,8 +393,8 @@ void keyPressed() {
     if (drawForecast) drawForecast();
     break;
 
-  case 'b':
-    blur = !blur;
+  case 'i':
+    drawInfo = !drawInfo;
     break;
 
   case 'w':
