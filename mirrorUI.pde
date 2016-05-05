@@ -15,15 +15,17 @@ float[] animationCurve = new float[60];
 int clockX = 384;
 int clockY = 40;
 int[] currentTime = new int[3];
+
+//cursors used for animation curve
 int c = 0;
 int cw = 0;
+
 String[] months = {"January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"};
 String[] weekDays = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
 int day = new Date().getDay() + 7;
-float yRatio;
+//float yRatio;
 
-//Set US city for Weather API
-String city = "Boulder";
+//Set US cities for Weather API
 String[] cities = {"Boulder", "Colorado Springs", "Denver", "Fort Collins"};
 int curCity = 0;
 
@@ -51,7 +53,6 @@ void setup() {
   noCursor();
   size(900, 1440);
   
-  yRatio = (240.0/1440.0)*height;
   frameRate(60);
   fill(255);
   pilogo = loadImage("rpi.png");
@@ -65,20 +66,27 @@ void setup() {
   currentTime[1] = getMinuteTen();
   currentTime[2] = getMinuteOne();
 
+  //generates a quadratic animation curve
   for (int i = 0; i < 60; i++) {
     animationCurve[i] = ((-15*(1-i)*(1+i))+1)*0.000287356;
     println(animationCurve[i]);
   }
+  
   fetchWeather();
-  //currentWeather = loadJSONObject("http://api.openweathermap.org/data/2.5/weather?q="+city+"us&appid="+apiKey);
-  //forecast = loadJSONObject("http://api.openweathermap.org/data/2.5/forecast?q="+city+",us&mode=json&appid="+apiKey);
   imageMode(CENTER);
 }
 
 void draw() {
   background(0);
+  textFont(Grotesk, 14);
+  fill(128);
+  text("C: change city", 5, height-100);
+  text("T: change temperature unit", 8, height-85);
+  text("W: display forecast", 9, height-70);
+  
   textFont(woodWarriorLight, 32);
-
+  fill(255);
+  //Draw the name of the current city in the bottom left
   text(cities[curCity], 8, height-8);
 
   //update day every midnight
@@ -91,6 +99,7 @@ void draw() {
     c = 59;
   }
 
+  //Tenth minute rollover animation
   if (currentTime[1] != getMinuteTen()) {
     newMinuteTen();
   } else {
@@ -101,12 +110,14 @@ void draw() {
     }
   }
 
+  //single minute rollover animation
   if (currentTime[2] != getMinuteOne()) {
     newMinuteOne();
   } else {
     text(getMinuteOne(), clockX+64, clockY);
   }
-
+  
+  //hour rollover animation
   if (currentTime[0] != hour()) {
     newHour();
   } else {
@@ -117,29 +128,23 @@ void draw() {
       text(hour(), clockX-24, clockY);
     }
   }
-
-  text(second(), clockX+104, clockY);
-  text(".", clockX+88, clockY);
-  text(".", clockX+88, clockY-16);
-  text(".", clockX+24, clockY);
-  text(".", clockX+24, clockY-16);
-
+  
+  //reset cursor values
   if (cw == 59) {
     if(!drawForecast) cw = 0;
   } else {
     cw += 60/int(frameRate-1);
     cw = constrain(cw, 0, 59);
   }
-
   if (second()%2 == 1 || c == 0)
   {
     c = 59;
-    //println("resetting c");
   } else {
     c -= 60/int(frameRate-1);
     c = constrain(c, 0, 59);
   }
 
+  //Sketch may behave oddly on leap years
   switch(month()) {
   case 2:
     drawDays(28);
@@ -160,7 +165,7 @@ void draw() {
     drawDays(31);
     break;
   }
-
+  drawSeconds();
   drawMonth();
   drawTemp();
   if (drawInfo){
@@ -180,8 +185,19 @@ void draw() {
   if (drawForecast) drawForecast();
 }
 
+//draw clock seconds and punctuation because the given typeface does not support ':'
+void drawSeconds(){
+    textFont(woodWarriorLight, 32);
+  text(second(), clockX+104, clockY);
+  text(".", clockX+88, clockY);
+  text(".", clockX+88, clockY-16);
+  text(".", clockX+24, clockY);
+  text(".", clockX+24, clockY-16);  
+}
+
+//Draws info page with attributions
 void drawInfo(){
-  translate(0, -150);
+  translate(0, -200);
   textAlign(CENTER);
   textFont(Grotesk, 72);
   text("IoT  Mirror", width/2, 300);
@@ -189,7 +205,8 @@ void drawInfo(){
   text("By", width/2, 350);
   text("Daniel  Strawn", width/2, 400);
   text("forwardsweep.net", width/2, 450);
-  
+    
+  translate(0, 50);
   text("Written  in  Processing", width/2, 550);
   text("for   ATLS-2519", width/2, 600);
   text("processing.org", width/2, 650);
@@ -213,15 +230,16 @@ void drawInfo(){
 }
 
 //Helper function barrowed verbatim from https://stackoverflow.com/questions/27475308/
+//replaces all spaces in a string with "%20"
 public String replace(String str) {
   return str.replaceAll(" ", "%20");
 }
 
+//updates forecast and current weather information
 void fetchWeather() {
   currentWeather = loadJSONObject("http://api.openweathermap.org/data/2.5/weather?q="+replace(cities[curCity])+"us&appid="+apiKey);
   println("http://api.openweathermap.org/data/2.5/weather?q="+replace(cities[curCity])+"us&appid="+apiKey);
   forecast = loadJSONObject("http://api.openweathermap.org/data/2.5/forecast?q="+replace(cities[curCity])+",us&mode=json&appid="+apiKey);
-  //println("http://api.openweathermap.org/data/2.5/forecast?q="+replace(cities[curCity])+",us&mode=json&appid="+apiKey);
   curSky  = currentWeather.getJSONArray("weather").getJSONObject(0).getString("description");
   curTemp = tConv(currentWeather.getJSONObject("main").getFloat("temp"));
   curHigh = tConv(currentWeather.getJSONObject("main").getFloat("temp_max"));
@@ -320,7 +338,7 @@ int msToMph(float ms) {
   return round(ms*2.23694);
 }
 
-//helper function to convert wind heading in degrees to human-friendlay directions
+//helper function to convert wind heading in degrees to human-friendly directions
 String degToDir(float degrees) {
   constrain(degrees, 0, 360);
   if (348.75 <= degrees || degrees < 11.24)   return "N";
@@ -341,6 +359,7 @@ String degToDir(float degrees) {
   if (326.25 <= degrees && degrees < 348.74)  return "NNW";
   return Float.toString(degrees);
 }
+
 
 void drawTemp() {
   translate(width*0.375, 0);
@@ -398,6 +417,7 @@ void keyPressed() {
     break;
 
   case 'w':
+    if(drawInfo) drawInfo = false;
     drawForecast = !drawForecast;
     cw = 0;
     break;
@@ -422,9 +442,10 @@ int tConv(float kelvin) {
   }
 }
 
+//draws the current month on the right
 void drawMonth() {
   textFont(Modulo, 32);
-  //text(months[month()-1], 8, 28);
+  //the following loop draws text vertically, but with each character oriented normally
   for (int i = 0; i < months[month() - 1].length(); i++) {
     text(stringArray(months[month() - 1], i), width - 32, (height/2 - 32*months[month() - 1].length()/2)+i*32);
   }
@@ -440,38 +461,40 @@ char stringArray(String toChar, int arrInd) {
   }
 }
 
+//Draws the days of the month/week on the left
 void drawDays(int numDays) {
   textFont(woodWarriorRegular, 14);
   rectMode(RADIUS);
   for (int i = 0; i < numDays; i++) {
     if (i+1 == day()) {
       fill(128, 255);
-      text(weekDays[day - 1], 40, yRatio+(i-1)*32);
-      text(weekDays[day + 1], 40, yRatio+(i+1)*32);
+      text(weekDays[day - 1], 40, height/6+(i-1)*32);
+      text(weekDays[day + 1], 40, height/6+(i+1)*32);
       fill(96, 255);
-      text(weekDays[day - 2], 40, yRatio+(i-2)*32);
-      text(weekDays[day + 2], 40, yRatio+(i+2)*32);
+      text(weekDays[day - 2], 40, height/6+(i-2)*32);
+      text(weekDays[day + 2], 40, height/6+(i+2)*32);
       fill(64, 255);
-      text(weekDays[day - 3], 40, yRatio+(i-3)*32);
-      text(weekDays[day + 3], 40, yRatio+(i+3)*32);
+      text(weekDays[day - 3], 40, height/6+(i-3)*32);
+      text(weekDays[day + 3], 40, height/6+(i+3)*32);
       fill(48, 255);
-      text(weekDays[day - 4], 40, yRatio+(i-4)*32);
-      text(weekDays[day + 4], 40, yRatio+(i+4)*32);
+      text(weekDays[day - 4], 40, height/6+(i-4)*32);
+      text(weekDays[day + 4], 40, height/6+(i+4)*32);
       fill(32, 255);
-      text(weekDays[day - 5], 40, yRatio+(i-5)*32);
-      text(weekDays[day + 5], 40, yRatio+(i+5)*32);      
+      text(weekDays[day - 5], 40, height/6+(i-5)*32);
+      text(weekDays[day + 5], 40, height/6+(i+5)*32);      
       fill(255);
-      rect(20, yRatio-(height*8.0/1440)+i*32, 15, 15, 6);
-      text(weekDays[day], 40, yRatio+i*32);
+      rect(20, height/6-(height*8.0/1440)+i*32, 15, 15, 6);
+      text(weekDays[day], 40, height/6+i*32);
       fill(0);
-      text(i+1, 10, yRatio+i*32);
+      text(i+1, 10, height/6+i*32);
     } else {
       fill(255);
-      text(i+1, 10, yRatio+i*32);
+      text(i+1, 10, height/6+i*32);
     }
   }
 }
 
+//hour rollover animation
 void newHour() {
   translate(0, -4*animationCurve[c]);
   fill(c*4);
@@ -495,6 +518,7 @@ void newHour() {
   }
 }
 
+//minute one rollover animation
 void newMinuteOne() {
   translate(0, -4*animationCurve[c]);
   fill(c*4);
@@ -508,6 +532,7 @@ void newMinuteOne() {
   }
 }
 
+//tenth minute rollover animation
 void newMinuteTen() {
   translate(0, -4*animationCurve[c]);
   fill(c*4);
@@ -521,7 +546,8 @@ void newMinuteTen() {
   }
 }
 
-//helper functions to split minutes
+//helper functions to split minutes into ones and tens
+//eg: getMinuteOne(23)=3, getMinuteTen(23)=2;
 int getMinuteOne() {
   int[] minArr = new int[2];
   int curMin = minute();
