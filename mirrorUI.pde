@@ -30,7 +30,7 @@ String[] cities = {"Boulder", "Colorado Springs", "Denver", "Fort Collins"};
 int curCity = 0;
 
 //Set API key for Weather API
-String apiKey = "82e1fdd5ea81c1e7a6d1164e0022ae2c";
+String apiKey = "";
 
 JSONObject currentWeather;
 JSONObject forecast;
@@ -174,6 +174,7 @@ void draw() {
     drawInfo();
   }
   
+  /*
   if(drawInfo){
     image(pilogo, width/2, height/2+450);
   } else {
@@ -181,6 +182,7 @@ void draw() {
     image(pilogo, width/2, height/2);
     noTint();    
   }
+  */
   
   if (drawForecast) drawForecast();
 }
@@ -237,15 +239,17 @@ public String replace(String str) {
 
 //updates forecast and current weather information
 void fetchWeather() {
-  currentWeather = loadJSONObject("http://api.openweathermap.org/data/2.5/weather?q="+replace(cities[curCity])+"us&appid="+apiKey);
+  //currentWeather = loadJSONObject("http://api.openweathermap.org/data/2.5/weather?q="+replace(cities[curCity])+",us&APPID="+apiKey);
+  currentWeather = loadJSONObject("https://samples.openweathermap.org/data/2.5/weather?q=London,uk&appid=b6907d289e10d714a6e88b30761fae22");
   println("http://api.openweathermap.org/data/2.5/weather?q="+replace(cities[curCity])+"us&appid="+apiKey);
-  forecast = loadJSONObject("http://api.openweathermap.org/data/2.5/forecast?q="+replace(cities[curCity])+",us&mode=json&appid="+apiKey);
+  //forecast = loadJSONObject("http://api.openweathermap.org/data/2.5/forecast?q="+replace(cities[curCity])+",us&mode=json&appid="+apiKey);
+  forecast = loadJSONObject("https://samples.openweathermap.org/data/2.5/forecast?q=London,us&appid=b6907d289e10d714a6e88b30761fae22");
   curSky  = currentWeather.getJSONArray("weather").getJSONObject(0).getString("description");
   curTemp = tConv(currentWeather.getJSONObject("main").getFloat("temp"));
   curHigh = tConv(currentWeather.getJSONObject("main").getFloat("temp_max"));
   curLow  = tConv(currentWeather.getJSONObject("main").getFloat("temp_min"));
   numFetches++;
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 4; i++) {
     forecastDates[i] = forecast.getJSONArray("list").getJSONObject(i*8).getString("dt_txt");
   }
 }
